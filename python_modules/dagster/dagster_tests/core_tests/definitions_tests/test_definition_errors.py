@@ -216,3 +216,21 @@ def test_bad_output_definition():
         + re.escape('.Exotic object'),
     ):
         _output = OutputDefinition(Exotic())
+
+
+def test_solid_tags():
+    @solid(tags={'good': {'ok': 'fine'}})
+    def _fine_tags(_):
+        pass
+
+    class X:
+        pass
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=r'Tag values must be strings or meet the constraint that ast\.literal_eval\(repr\(value\)\) == value',
+    ):
+
+        @solid(tags={'bad': X()})
+        def _bad_tags(_):
+            pass
