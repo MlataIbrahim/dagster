@@ -1,8 +1,9 @@
 import keyword
 import re
 
-from dagster import check
+from dagster import check, seven
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.utils import frozentags
 
 DEFAULT_OUTPUT = 'result'
 
@@ -55,3 +56,28 @@ def struct_to_string(name, **kwargs):
     # Sort the kwargs to ensure consistent representations across Python versions
     props_str = ', '.join([_kv_str(key, value) for key, value in sorted(kwargs.items())])
     return '{name}({props_str})'.format(name=name, props_str=props_str)
+
+
+def validate_tags(tags):
+    valid_tags = {}
+    for key, value in check.opt_dict_param(tags, 'tags', key_type=str).items():
+        if not check.is_str(value):
+            valid = False
+            try:
+                str_val = seven.json.dumps(value)
+                valid = seven.json.loads(str_val) == value
+            except SyntaxError:
+                valid = False
+
+            if not valid:
+                raise DagsterInvalidDefinitionError(
+                    'Invalid value for tag "{key}", repr(value) "{val}" is not equivalent '
+                    'to original value. Tag values must be strings or meet the constraint '
+                    'that json.loads(json.dumps(value)) == value.'.format(key=key, val=str_val)
+                )
+
+            valid_tags[key] = str_val
+        else:
+            valid_tags[key] = value
+
+    return frozentags(valid_tags)
