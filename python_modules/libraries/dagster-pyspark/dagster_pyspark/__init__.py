@@ -22,7 +22,8 @@ from .resources import PySparkResourceDefinition, pyspark_resource, spark_sessio
                 'header': Field(Bool, is_required=False),
             }
         }
-    )
+    ),
+    required_resource_keys={'spark'},
 )
 def load_rdd(context, file_type, file_options):
     if file_type == 'csv':
@@ -44,7 +45,8 @@ def load_rdd(context, file_type, file_options):
                 }
             )
         }
-    )
+    ),
+    required_resource_keys={'spark'},
 )
 def write_rdd(context, file_type, file_options, spark_rdd):
     if file_type == 'csv':

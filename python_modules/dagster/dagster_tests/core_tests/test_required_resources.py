@@ -3,6 +3,7 @@ import pytest
 from dagster import (
     DagsterUnknownResourceError,
     InputDefinition,
+    Materialization,
     ModeDefinition,
     OutputDefinition,
     ResourceDefinition,
@@ -12,10 +13,12 @@ from dagster import (
     composite_solid,
     execute_pipeline,
     input_hydration_config,
+    output_materialization_config,
     pipeline,
     resource,
     solid,
 )
+from dagster.core.types.dagster_type import create_any_type
 
 
 def get_resource_init_pipeline(resources_initted):
@@ -287,7 +290,7 @@ def test_execution_plan_subset_with_aliases():
 # https://github.com/dagster-io/dagster/issues/1949
 
 
-def test_custom_type_with_resource_dependendent_hydration():
+def test_custom_type_with_resource_dependent_hydration():
     def define_input_hydration_pipeline(should_require_resources):
         @resource
         def resource_a(_):
@@ -328,6 +331,47 @@ def test_custom_type_with_resource_dependendent_hydration():
     assert execute_pipeline(
         sufficiently_required_pipeline,
         {'solids': {'input_hydration_solid': {'inputs': {'custom_type': 'hello'}}}},
+    ).success
+
+
+def test_custom_type_with_resource_dependent_materialization():
+    def define_materialization_pipeline(should_require_resources):
+        @resource
+        def resource_a(_):
+            yield 'A'
+
+        @output_materialization_config(
+            String, required_resource_keys={'a'} if should_require_resources else set()
+        )
+        def materialize(context, *_args, **_kwargs):
+            assert context.resources.a == 'A'
+            return Materialization('hello')
+
+        CustomDagsterType = create_any_type(
+            name='CustomType', output_materialization_config=materialize
+        )
+
+        @solid(output_defs=[OutputDefinition(CustomDagsterType)])
+        def output_solid(_context):
+            return 'hello'
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
+        def output_pipeline():
+            output_solid()
+
+        return output_pipeline
+
+    under_required_pipeline = define_materialization_pipeline(should_require_resources=False)
+    with pytest.raises(DagsterUnknownResourceError):
+        execute_pipeline(
+            under_required_pipeline,
+            {'solids': {'output_solid': {'outputs': [{'result': 'hello'}]}}},
+        )
+
+    sufficiently_required_pipeline = define_materialization_pipeline(should_require_resources=True)
+    assert execute_pipeline(
+        sufficiently_required_pipeline,
+        {'solids': {'output_solid': {'outputs': [{'result': 'hello'}]}}},
     ).success
 
 
