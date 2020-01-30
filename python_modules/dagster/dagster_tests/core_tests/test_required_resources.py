@@ -18,6 +18,7 @@ from dagster import (
     resource,
     solid,
 )
+from dagster.core.storage.type_storage import TypeStoragePlugin
 from dagster.core.types.dagster_type import create_any_type
 
 
@@ -373,6 +374,51 @@ def test_custom_type_with_resource_dependent_materialization():
         sufficiently_required_pipeline,
         {'solids': {'output_solid': {'outputs': [{'result': 'hello'}]}}},
     ).success
+
+
+def test_custom_type_with_resource_dependent_storage_plugin():
+    def define_plugin_pipeline(should_require_resources):
+        class CustomStoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
+            @classmethod
+            def compatible_with_storage_def(cls, system_storage_def):
+                return True
+
+            @classmethod
+            def set_object(cls, intermediate_store, obj, context, runtime_type, paths):
+                assert context.resources.a == 'A'
+                return intermediate_store.set_object(obj, context, runtime_type, paths)
+
+            @classmethod
+            def get_object(cls, intermediate_store, context, runtime_type, paths):
+                assert context.resources.a == 'A'
+                return intermediate_store.get_object(context, runtime_type, paths)
+
+            @classmethod
+            def required_resource_keys(cls):
+                return {'a'} if should_require_resources else set()
+
+        @resource
+        def resource_a(_):
+            yield 'A'
+
+        CustomDagsterType = create_any_type(name='CustomType', auto_plugins=[CustomStoragePlugin])
+
+        @solid(output_defs=[OutputDefinition(CustomDagsterType)])
+        def output_solid(_context):
+            return 'hello'
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
+        def plugin_pipeline():
+            output_solid()
+
+        return plugin_pipeline
+
+    under_required_pipeline = define_plugin_pipeline(should_require_resources=False)
+    with pytest.raises(DagsterUnknownResourceError):
+        execute_pipeline(under_required_pipeline, {'storage': {'filesystem': {}}})
+
+    sufficiently_required_pipeline = define_plugin_pipeline(should_require_resources=True)
+    assert execute_pipeline(sufficiently_required_pipeline, {'storage': {'filesystem': {}}}).success
 
 
 @pytest.mark.skip(reason="not yet implemented")
