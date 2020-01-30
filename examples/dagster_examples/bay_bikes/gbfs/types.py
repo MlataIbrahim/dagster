@@ -1,6 +1,6 @@
 import json
 
-from dagster import SerializationStrategy, check, dagster_type
+from dagster import SerializationStrategy, check, map_to_dagster_type
 
 # from jsonschema import ValidationError, validate
 
@@ -29,7 +29,7 @@ def validated_json_type(_schema, **kwargs):
     #     else:
     #         return True
 
-    @dagster_type(
+    @map_to_dagster_type(
         # type_check=_type_check,
         serialization_strategy=JsonSerializationStrategy(indent=2, separators=(', ', ': ')),
         **kwargs

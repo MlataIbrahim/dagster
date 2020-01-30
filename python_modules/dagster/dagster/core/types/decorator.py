@@ -3,7 +3,7 @@ from dagster import check
 from .dagster_type import PythonObjectDagsterType, map_python_type_to_dagster_type
 
 
-def dagster_type(
+def map_to_dagster_type(
     name=None,
     description=None,
     input_hydration_config=None,
@@ -49,7 +49,7 @@ def dagster_type(
     .. code-block:: python
 
         # dagster_aws.s3.file_manager.S3FileHandle
-        @dagster_type
+        @map_to_dagster_type
         class S3FileHandle(FileHandle):
             def __init__(self, s3_bucket, s3_key):
                 self._s3_bucket = check.str_param(s3_bucket, 's3_bucket')

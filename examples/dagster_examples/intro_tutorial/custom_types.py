@@ -1,9 +1,9 @@
 import csv
 
-from dagster import dagster_type, execute_pipeline, pipeline, solid
+from dagster import execute_pipeline, map_to_dagster_type, pipeline, solid
 
 
-@dagster_type(
+@map_to_dagster_type(
     name='SimpleDataFrame',
     description=(
         'A naive representation of a data frame, e.g., as returned by '

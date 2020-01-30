@@ -574,7 +574,7 @@ _RUNTIME_MAP = {
 }
 
 _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY = {}
-'''Python types corresponding to user-defined RunTime types created using @dagster_type or
+'''Python types corresponding to user-defined RunTime types created using @map_to_dagster_type or
 as_dagster_type are registered here so that we can remap the Python types to runtime types.'''
 
 
@@ -587,7 +587,7 @@ def map_python_type_to_dagster_type(python_type, dagster_type):
         raise DagsterInvalidDefinitionError(
             'A Dagster runtime type has already been registered for the Python type {python_type}. '
             'You can resolve this collision by decorating a subclass of {python_type} with the '
-            '@dagster_type decorator, instead of decorating {python_type} or passing it to '
+            '@map_to_dagster_type decorator, instead of decorating {python_type} or passing it to '
             'as_dagster_type directly.'.format(python_type=python_type)
         )
 
@@ -597,7 +597,7 @@ def map_python_type_to_dagster_type(python_type, dagster_type):
 DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
     'Invalid type: dagster_type must be a Python type, a type constructed using '
     'python.typing, a type imported from the dagster module, or a class annotated using '
-    'as_dagster_type or @dagster_type: got {dagster_type}{additional_msg}'
+    'as_dagster_type or @map_to_dagster_type: got {dagster_type}{additional_msg}'
 )
 
 

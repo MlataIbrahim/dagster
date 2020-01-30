@@ -7,9 +7,9 @@ from dagster import (
     Materialization,
     Selector,
     String,
-    dagster_type,
     execute_pipeline,
     input_hydration_config,
+    map_to_dagster_type,
     output_materialization_config,
     pipeline,
     solid,
@@ -61,7 +61,7 @@ def less_simple_data_frame_output_materialization_config(
     )
 
 
-@dagster_type(
+@map_to_dagster_type(
     name='LessSimpleDataFrame',
     description='A more sophisticated data frame that type checks its structure.',
     input_hydration_config=less_simple_data_frame_input_hydration_config,

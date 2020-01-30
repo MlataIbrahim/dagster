@@ -9,9 +9,9 @@ from dagster import (
     OutputDefinition,
     PipelineDefinition,
     composite_solid,
-    dagster_type,
     execute_pipeline,
     lambda_solid,
+    map_to_dagster_type,
     pipeline,
     solid,
 )
@@ -169,7 +169,7 @@ def test_deep_graph():
 
 
 def test_unconfigurable_inputs_pipeline():
-    @dagster_type
+    @map_to_dagster_type
     class NewType(object):
         pass
 

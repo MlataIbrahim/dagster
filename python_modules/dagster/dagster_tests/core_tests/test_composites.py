@@ -12,10 +12,10 @@ from dagster import (
     PipelineDefinition,
     String,
     composite_solid,
-    dagster_type,
     execute_pipeline,
     execute_solid,
     lambda_solid,
+    map_to_dagster_type,
     pipeline,
     solid,
 )
@@ -228,7 +228,7 @@ def test_io_error_is_decent():
 
 
 def test_types_descent():
-    @dagster_type
+    @map_to_dagster_type
     class Foo(object):
         pass
 

@@ -4,9 +4,9 @@ from dagster import (
     InputDefinition,
     Int,
     composite_solid,
-    dagster_type,
     execute_solid,
     lambda_solid,
+    map_to_dagster_type,
     solid,
 )
 
@@ -107,7 +107,7 @@ def test_wrapped_input_and_output_lambda():
 
 
 def test_kitchen_sink():
-    @dagster_type
+    @map_to_dagster_type
     class Custom(object):
         pass
 
