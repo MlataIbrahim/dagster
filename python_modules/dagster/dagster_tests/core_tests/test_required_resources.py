@@ -421,7 +421,6 @@ def test_custom_type_with_resource_dependent_storage_plugin():
     assert execute_pipeline(sufficiently_required_pipeline, {'storage': {'filesystem': {}}}).success
 
 
-@pytest.mark.skip(reason="not yet implemented")
 def test_resource_dependent_hydration_with_selective_init():
     def get_resource_init_input_hydration_pipeline(resources_initted):
         @resource
@@ -457,4 +456,47 @@ def test_resource_dependent_hydration_with_selective_init():
 
     resources_initted = {}
     assert execute_pipeline(get_resource_init_input_hydration_pipeline(resources_initted)).success
-    assert set(resources_initted.keys()) == {}
+    assert set(resources_initted.keys()) == set()
+
+
+def test_custom_type_with_resource_dependent_storage_plugin_selective_init():
+    def define_selective_plugin_pipeline(resources_initted):
+        class CustomStoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
+            @classmethod
+            def compatible_with_storage_def(cls, system_storage_def):
+                return False
+
+            @classmethod
+            def set_object(cls, intermediate_store, obj, context, runtime_type, paths):
+                assert context.resources.a == 'A'
+                return intermediate_store.set_object(obj, context, runtime_type, paths)
+
+            @classmethod
+            def get_object(cls, intermediate_store, context, runtime_type, paths):
+                assert context.resources.a == 'A'
+                return intermediate_store.get_object(context, runtime_type, paths)
+
+            @classmethod
+            def required_resource_keys(cls):
+                return {'a'}
+
+        @resource
+        def resource_a(_):
+            resources_initted['a'] = True
+            yield 'A'
+
+        CustomDagsterType = create_any_type(name='CustomType', auto_plugins=[CustomStoragePlugin])
+
+        @solid(output_defs=[OutputDefinition(CustomDagsterType)])
+        def output_solid(_context):
+            return 'hello'
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
+        def selective_pipeline():
+            output_solid()
+
+        return selective_pipeline
+
+    resources_initted = {}
+    assert execute_pipeline(define_selective_plugin_pipeline(resources_initted)).success
+    assert set(resources_initted.keys()) == set()

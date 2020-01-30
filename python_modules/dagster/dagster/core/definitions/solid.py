@@ -237,10 +237,7 @@ class SolidDefinition(ISolidDefinition):
 
     @property
     def required_resource_keys(self):
-        resource_keys = set(self._required_resource_keys)
-        for runtime_type in self.all_runtime_types():
-            resource_keys = resource_keys.union(runtime_type.required_resource_keys)
-        return frozenset(resource_keys)
+        return frozenset(self._required_resource_keys)
 
     @property
     def step_metadata_fn(self):
