@@ -8,9 +8,9 @@ from dagster import (  # as_dagster_type,
     Field,
     Materialization,
     Path,
+    PythonObjectDagsterType,
     String,
     check,
-    define_python_dagster_type,
     resource,
 )
 from dagster.config.field_utils import Selector
@@ -67,7 +67,7 @@ def write_rdd(context, file_type, file_options, spark_rdd):
         check.failed('Unsupported file type: {}'.format(file_type))
 
 
-SparkRDD = define_python_dagster_type(
+SparkRDD = PythonObjectDagsterType(
     python_type=RDD,
     name='SparkRDD',
     input_hydration_config=load_rdd,
@@ -139,7 +139,7 @@ class SparkDataFrameFilesystemStoragePlugin(TypeStoragePlugin):  # pylint: disab
         )
 
 
-DataFrame = define_python_dagster_type(
+DataFrame = PythonObjectDagsterType(
     python_type=NativeSparkDataFrame,
     name='PySparkDataFrame',
     description='A Pyspark data frame.',
