@@ -10,8 +10,8 @@ from dagster import (
     execute_solid,
     lambda_solid,
 )
-from dagster.core.types.dagster_type import resolve_dagster_type
 from dagster.core.types.python_set import create_typed_runtime_set
+from dagster.core.types.resolve_dagster_type import resolve_dagster_type
 
 
 def test_vanilla_set_output():

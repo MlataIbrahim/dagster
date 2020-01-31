@@ -178,12 +178,13 @@ def test_bad_output_definition():
     with pytest.raises(
         DagsterInvalidDefinitionError,
         match=re.escape(
-            'Invalid type: dagster_type must be a Python type, a type constructed using '
-            'python.typing, a type imported from the dagster module, or a class annotated using '
-            'as_dagster_type or @map_to_dagster_type: got foo'
+            "Invalid type: dagster_type must be a Python type, a type "
+            "constructed using python.typing, a type imported from the "
+            "dagster module, or a class annotated using as_dagster_type "
+            "or @map_to_dagster_type: got 'foo'"
         ),
     ):
-        _output = OutputDefinition('foo')
+        OutputDefinition('foo')
 
     # Test the case where the object is not hashable
     with pytest.raises(
@@ -195,7 +196,7 @@ def test_bad_output_definition():
             'Did you pass an instance of a type instead of the type?'
         ),
     ):
-        _output = OutputDefinition({'foo': 'bar'})
+        OutputDefinition({'foo': 'bar'})
 
     # Test the case where the object throws in __nonzero__, e.g. pandas.DataFrame
     class Exotic(object):
@@ -215,4 +216,4 @@ def test_bad_output_definition():
         + ')?'
         + re.escape('.Exotic object'),
     ):
-        _output = OutputDefinition(Exotic())
+        OutputDefinition(Exotic())

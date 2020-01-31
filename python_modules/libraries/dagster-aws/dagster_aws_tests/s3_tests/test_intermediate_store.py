@@ -32,7 +32,8 @@ from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.type_storage import TypeStoragePlugin, TypeStoragePluginRegistry
 from dagster.core.types.dagster_type import Bool as RuntimeBool
 from dagster.core.types.dagster_type import String as RuntimeString
-from dagster.core.types.dagster_type import create_any_type, resolve_dagster_type
+from dagster.core.types.dagster_type import create_any_type
+from dagster.core.types.resolve_dagster_type import resolve_dagster_type
 from dagster.utils.test import yield_empty_pipeline_context
 
 

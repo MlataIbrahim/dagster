@@ -416,6 +416,8 @@ def _create_nullable_input_schema(inner_type):
 
 class OptionalType(DagsterType):
     def __init__(self, inner_type):
+        from .resolve_dagster_type import resolve_dagster_type
+
         inner_type = resolve_dagster_type(inner_type)
 
         if inner_type is Nothing:
@@ -513,6 +515,8 @@ class ListType(DagsterType):
 class DagsterListApi:
     def __getitem__(self, inner_type):
         check.not_none_param(inner_type, 'inner_type')
+        from .resolve_dagster_type import resolve_dagster_type
+
         return _List(resolve_dagster_type(inner_type))
 
     def __call__(self, inner_type):
@@ -578,6 +582,14 @@ _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY = {}
 as_dagster_type are registered here so that we can remap the Python types to runtime types.'''
 
 
+def is_type_mapped(python_type):
+    return python_type in _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY
+
+
+def get_dagster_type_for_mapped_python_type(python_type):
+    return _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY[python_type]
+
+
 def map_python_type_to_dagster_type(python_type, dagster_type):
     check.inst_param(dagster_type, 'dagster_type', DagsterType)
     if python_type in _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY:
@@ -592,89 +604,6 @@ def map_python_type_to_dagster_type(python_type, dagster_type):
         )
 
     _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY[python_type] = dagster_type
-
-
-DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
-    'Invalid type: dagster_type must be a Python type, a type constructed using '
-    'python.typing, a type imported from the dagster module, or a class annotated using '
-    'as_dagster_type or @map_to_dagster_type: got {dagster_type}{additional_msg}'
-)
-
-
-def resolve_dagster_type(dagster_type):
-    # circular dep
-    from .python_dict import PythonDict, Dict
-    from .python_set import PythonSet, DagsterSetApi
-    from .python_tuple import PythonTuple, DagsterTupleApi
-    from .transform_typing import transform_typing_type
-    from dagster.config.config_type import ConfigType
-    from dagster.primitive_mapping import (
-        remap_python_builtin_for_runtime,
-        is_supported_runtime_python_builtin,
-    )
-    from dagster.utils.typing_api import is_typing_type
-
-    check.invariant(
-        not (isinstance(dagster_type, type) and issubclass(dagster_type, ConfigType)),
-        'Cannot resolve a config type to a runtime type',
-    )
-
-    check.invariant(
-        not (isinstance(dagster_type, type) and issubclass(dagster_type, DagsterType)),
-        'Do not pass runtime type classes. Got {}'.format(dagster_type),
-    )
-
-    # First check to see if it part of python's typing library
-    if is_typing_type(dagster_type):
-        dagster_type = transform_typing_type(dagster_type)
-
-    if isinstance(dagster_type, DagsterType):
-        return dagster_type
-
-    # Test for unhashable objects -- this is if, for instance, someone has passed us an instance of
-    # a dict where they meant to pass dict or Dict, etc.
-    try:
-        hash(dagster_type)
-    except TypeError:
-        raise DagsterInvalidDefinitionError(
-            DAGSTER_INVALID_TYPE_ERROR_MESSAGE.format(
-                additional_msg=(
-                    ', which isn\'t hashable. Did you pass an instance of a type instead of '
-                    'the type?'
-                ),
-                dagster_type=str(dagster_type),
-            )
-        )
-
-    if is_supported_runtime_python_builtin(dagster_type):
-        return remap_python_builtin_for_runtime(dagster_type)
-
-    if dagster_type is None:
-        return Any
-
-    if dagster_type in _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY:
-        return _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY[dagster_type]
-
-    if dagster_type is Dict:
-        return PythonDict
-    if isinstance(dagster_type, DagsterTupleApi):
-        return PythonTuple
-    if isinstance(dagster_type, DagsterSetApi):
-        return PythonSet
-    if isinstance(dagster_type, DagsterListApi):
-        return List(Any)
-    if BuiltinEnum.contains(dagster_type):
-        return DagsterType.from_builtin_enum(dagster_type)
-    if not isinstance(dagster_type, type):
-        raise DagsterInvalidDefinitionError(
-            DAGSTER_INVALID_TYPE_ERROR_MESSAGE.format(
-                dagster_type=str(dagster_type), additional_msg='.'
-            )
-        )
-
-    raise DagsterInvalidDefinitionError(
-        '{dagster_type} cannot be resolved to dagster type.'.format(dagster_type=dagster_type)
-    )
 
 
 ALL_RUNTIME_BUILTINS = list(_RUNTIME_MAP.values())
