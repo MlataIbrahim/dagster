@@ -136,7 +136,10 @@ def get_required_resource_keys_for_step(execution_step, pipeline_def, system_sto
 
     # add output materialization config resource keys
     for step_output in execution_step.step_outputs:
-        if step_output.runtime_type.output_materialization_config:
+        if (
+            step_output.should_materialize
+            and step_output.runtime_type.output_materialization_config
+        ):
             resource_keys = resource_keys.union(
                 step_output.runtime_type.output_materialization_config.required_resource_keys()
             )

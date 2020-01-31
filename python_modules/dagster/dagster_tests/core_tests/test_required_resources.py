@@ -459,6 +459,37 @@ def test_resource_dependent_hydration_with_selective_init():
     assert set(resources_initted.keys()) == set()
 
 
+def test_custom_type_with_resource_dependent_materialization_selective_init():
+    def define_materialization_pipeline(resources_initted):
+        @resource
+        def resource_a(_):
+            resources_initted['a'] = True
+            yield 'A'
+
+        @output_materialization_config(String, required_resource_keys={'a'})
+        def materialize(context, *_args, **_kwargs):
+            assert context.resources.a == 'A'
+            return Materialization('hello')
+
+        CustomDagsterType = create_any_type(
+            name='CustomType', output_materialization_config=materialize
+        )
+
+        @solid(output_defs=[OutputDefinition(CustomDagsterType)])
+        def output_solid(_context):
+            return 'hello'
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
+        def output_pipeline():
+            output_solid()
+
+        return output_pipeline
+
+    resources_initted = {}
+    assert execute_pipeline(define_materialization_pipeline(resources_initted)).success
+    assert set(resources_initted.keys()) == set()
+
+
 def test_custom_type_with_resource_dependent_storage_plugin_selective_init():
     def define_selective_plugin_pipeline(resources_initted):
         class CustomStoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
