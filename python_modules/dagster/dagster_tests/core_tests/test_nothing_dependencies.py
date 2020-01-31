@@ -4,8 +4,8 @@ import pytest
 
 from dagster import (
     DagsterInvalidDefinitionError,
-    DagsterTypeCheckError,
     DependencyDefinition,
+    Failure,
     InputDefinition,
     Int,
     List,
@@ -110,7 +110,7 @@ def test_result_type_check():
         yield Output('oops')
 
     pipeline = PipelineDefinition(name='fail', solid_defs=[bad])
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_pipeline(pipeline)
 
 
@@ -256,10 +256,10 @@ def test_invalid_nothing_fns():
     def yield_val(_context):
         yield Output('val')
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_pipeline(PipelineDefinition(name='fn_test', solid_defs=[ret_val]))
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_pipeline(PipelineDefinition(name='fn_test', solid_defs=[yield_val]))
 
 
