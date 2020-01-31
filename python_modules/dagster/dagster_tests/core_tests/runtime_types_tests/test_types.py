@@ -1,11 +1,10 @@
-import re
 import sys
 
 import pytest
 
 from dagster import (
-    DagsterTypeCheckError,
     EventMetadataEntry,
+    Failure,
     InputDefinition,
     Int,
     List,
@@ -184,12 +183,8 @@ def test_input_types_fail_in_pipeline():
     def pipe():
         return take_string(return_one())
 
-    with pytest.raises(DagsterTypeCheckError) as exc_info:
+    with pytest.raises(Failure):
         execute_pipeline(pipe)
-
-    assert 'In solid "take_string" the input "string" received value 1 of Python ' in str(
-        exc_info.value
-    )
 
     # now check events in no throw case
 
@@ -216,12 +211,8 @@ def test_output_types_fail_in_pipeline():
     def pipe():
         return return_int_fails()
 
-    with pytest.raises(DagsterTypeCheckError) as exc_info:
+    with pytest.raises(Failure):
         execute_pipeline(pipe)
-
-    assert (
-        'In solid "return_int_fails" the output "result" received value 1 of Python type'
-    ) in str(exc_info.value)
 
     pipeline_result = execute_no_throw(pipe)
 
@@ -272,17 +263,7 @@ def test_input_type_returns_wrong_thing():
 
     # when https://github.com/dagster-io/dagster/issues/2018 is resolve
     # the two error messages in the test should be the same
-    with pytest.raises(
-        DagsterTypeCheckError,
-        match=re.escape(
-            'In solid "take_bad_thing" the input "value" received value 1 of Python type <'
-        )
-        + '(class|type)'
-        + re.escape(
-            ' \'int\'> which does not pass the typecheck for Dagster type BadType. Step '
-            'take_bad_thing.compute.'
-        ),
-    ):
+    with pytest.raises(Failure):
         execute_pipeline(pipe)
 
     pipeline_result = execute_no_throw(pipe)
@@ -320,17 +301,7 @@ def test_output_type_returns_wrong_thing():
 
     # when https://github.com/dagster-io/dagster/issues/2018 is resolve
     # the two error messages in the test should be the same
-    with pytest.raises(
-        DagsterTypeCheckError,
-        match=re.escape(
-            'In solid "return_one_bad_thing" the output "result" received value 1 of Python type <'
-        )
-        + '(class|type)'
-        + re.escape(
-            ' \'int\'> which does not pass the typecheck for Dagster type BadType. Step '
-            'return_one_bad_thing.compute.'
-        ),
-    ):
+    with pytest.raises(Failure):
         execute_pipeline(pipe)
 
     pipeline_result = execute_no_throw(pipe)
@@ -371,7 +342,7 @@ def test_input_type_throw_arbitrary_exception():
     def pipe():
         return take_throws(return_one())
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_pipeline(pipe)
 
     pipeline_result = execute_no_throw(pipe)
@@ -393,7 +364,7 @@ def test_output_type_throw_arbitrary_exception():
     def pipe():
         return return_one_throws()
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_pipeline(pipe)
 
     pipeline_result = execute_no_throw(pipe)

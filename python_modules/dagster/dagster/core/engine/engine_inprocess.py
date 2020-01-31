@@ -264,7 +264,7 @@ def dagster_event_sequence_for_step(step_context):
         )
 
         if step_context.raise_on_error:
-            raise dagster_user_error
+            raise dagster_user_error.user_exception
 
     # case (2) in top comment
     except DagsterError as dagster_error:

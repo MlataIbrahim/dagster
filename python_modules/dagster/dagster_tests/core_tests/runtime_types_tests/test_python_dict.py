@@ -2,14 +2,7 @@ import typing
 
 import pytest
 
-from dagster import (
-    DagsterTypeCheckError,
-    Dict,
-    InputDefinition,
-    OutputDefinition,
-    execute_solid,
-    lambda_solid,
-)
+from dagster import Dict, Failure, InputDefinition, OutputDefinition, execute_solid, lambda_solid
 
 
 def test_basic_python_dictionary_output():
@@ -35,7 +28,7 @@ def test_basic_python_dictionary_wrong():
     def emit_dict():
         return 1
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_solid(emit_dict)
 
 
@@ -44,7 +37,7 @@ def test_basic_python_dictionary_input_wrong():
     def input_dict(data):
         return data['key']
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_solid(input_dict, input_values={'data': 123})
 
 
@@ -105,7 +98,7 @@ def test_basic_closed_typing_dictionary_wrong():
     def emit_dict():
         return 1
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_solid(emit_dict)
 
 
@@ -138,7 +131,7 @@ def test_basic_closed_typing_dictionary_key_wrong():
     def emit_dict():
         return {1: 'foo'}
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_solid(emit_dict)
 
 
@@ -147,7 +140,7 @@ def test_basic_closed_typing_dictionary_value_wrong():
     def emit_dict():
         return {'foo': 1}
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_solid(emit_dict)
 
 
@@ -164,5 +157,5 @@ def test_complicated_dictionary_typing_fail():
     def emit_dict():
         return {'foo': [{1: 1, '2': 2}]}
 
-    with pytest.raises(DagsterTypeCheckError):
+    with pytest.raises(Failure):
         execute_solid(emit_dict)
