@@ -29,7 +29,7 @@ def remap_python_builtin_for_runtime(ttype):
     '''This function remaps a python type to a Dagster type, or passes it through if it cannot be
     remapped.
     '''
-    from dagster.core.types.dagster_type import resolve_dagster_type
+    from dagster.core.types.resolve_dagster_type import resolve_dagster_type
 
     check.param_invariant(is_supported_runtime_python_builtin(ttype), 'ttype')
 

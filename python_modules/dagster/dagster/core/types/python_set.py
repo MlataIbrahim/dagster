@@ -2,7 +2,7 @@ from dagster import check
 from dagster.config.config_type import Array
 
 from .config_schema import InputHydrationConfig
-from .dagster_type import DagsterType, PythonObjectDagsterType, resolve_dagster_type
+from .dagster_type import DagsterType, PythonObjectDagsterType
 
 PythonSet = PythonObjectDagsterType(
     set, 'PythonSet', description='''Represents a python dictionary to pass between solids'''
@@ -72,6 +72,8 @@ class _TypedPythonSet(DagsterType):
 
 
 def create_typed_runtime_set(item_dagster_type):
+    from .resolve_dagster_type import resolve_dagster_type
+
     item_runtime_type = resolve_dagster_type(item_dagster_type)
 
     check.invariant(
