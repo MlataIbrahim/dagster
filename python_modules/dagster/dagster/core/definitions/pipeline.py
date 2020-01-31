@@ -193,9 +193,7 @@ class PipelineDefinition(IContainSolids, object):
         _validate_inputs(self._dependency_structure, self._solid_dict)
 
         self._all_solid_defs = _build_all_solid_defs(self._current_level_solid_defs)
-
-        self._selector = ExecutionSelector(self.name, list(solid_dict.keys()))
-
+        self._parent_pipeline_def = None
         self._cached_enviroment_schemas = {}
 
     def get_environment_schema(self, mode=None):
@@ -350,7 +348,10 @@ class PipelineDefinition(IContainSolids, object):
 
     @property
     def selector(self):
-        return self._selector
+        if self._parent_pipeline_def is None:
+            return ExecutionSelector(self.name)
+
+        return ExecutionSelector(self.name, list(self._solid_dict.keys()))
 
     def has_runtime_type(self, name):
         check.str_param(name, 'name')
@@ -381,9 +382,21 @@ class PipelineDefinition(IContainSolids, object):
         check.str_param(name, 'name')
         return name in self._all_solid_defs
 
+    # mutative method to avoid complexity in constructor args
+    def _set_parent(self, parent_def):
+        check.inst_param(parent_def, 'parent_def', PipelineDefinition)
+        check.invariant(self._parent_pipeline_def is None, 'Can not set parent pipeline def twice.')
+        self._parent_pipeline_def = parent_def
+        return self
+
     def build_sub_pipeline(self, solid_subset):
         check.opt_list_param(solid_subset, 'solid_subset', of_type=str)
-        return self if solid_subset is None else _build_sub_pipeline(self, solid_subset)
+        return (
+            self
+            if solid_subset is None
+            # pylint: disable=protected-access
+            else _build_sub_pipeline(self, solid_subset)._set_parent(self)
+        )
 
     def get_presets(self):
         return list(self._preset_dict.values())
