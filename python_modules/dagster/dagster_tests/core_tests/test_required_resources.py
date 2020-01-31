@@ -1,6 +1,7 @@
 import pytest
 
 from dagster import (
+    CompositeSolidDefinition,
     DagsterUnknownResourceError,
     InputDefinition,
     Materialization,
@@ -488,6 +489,53 @@ def test_custom_type_with_resource_dependent_materialization_selective_init():
     resources_initted = {}
     assert execute_pipeline(define_materialization_pipeline(resources_initted)).success
     assert set(resources_initted.keys()) == set()
+
+
+@pytest.mark.skip(reason="not yet handling composites")
+def test_custom_type_with_resource_dependent_composite_materialization():
+    def define_materialization_pipeline(should_require_resources):
+        @resource
+        def resource_a(_):
+            yield 'A'
+
+        @output_materialization_config(
+            String, required_resource_keys={'a'} if should_require_resources else set()
+        )
+        def materialize(context, *_args, **_kwargs):
+            assert context.resources.a == 'A'
+            return Materialization('hello')
+
+        CustomDagsterType = create_any_type(
+            name='CustomType', output_materialization_config=materialize
+        )
+
+        @solid(output_defs=[OutputDefinition(CustomDagsterType)])
+        def output_solid(_context):
+            return 'hello'
+
+        wrap_solid = CompositeSolidDefinition(
+            name="wrap_solid",
+            solid_defs=[output_solid],
+            output_mappings=[OutputDefinition(CustomDagsterType).mapping_from('output_solid')],
+        )
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
+        def output_pipeline():
+            wrap_solid()
+
+        return output_pipeline
+
+    under_required_pipeline = define_materialization_pipeline(should_require_resources=False)
+    with pytest.raises(DagsterUnknownResourceError):
+        execute_pipeline(
+            under_required_pipeline, {'solids': {'wrap_solid': {'outputs': [{'result': 'hello'}]}}},
+        )
+
+    sufficiently_required_pipeline = define_materialization_pipeline(should_require_resources=True)
+    assert execute_pipeline(
+        sufficiently_required_pipeline,
+        {'solids': {'wrap_solid': {'outputs': [{'result': 'hello'}]}}},
+    ).success
 
 
 def test_custom_type_with_resource_dependent_storage_plugin_selective_init():
