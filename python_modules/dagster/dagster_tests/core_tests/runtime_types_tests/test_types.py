@@ -17,11 +17,8 @@ from dagster import (
     pipeline,
     solid,
 )
-from dagster.core.types.dagster_type import (
-    DagsterType,
-    PythonObjectDagsterType,
-    resolve_dagster_type,
-)
+from dagster.core.types.dagster_type import DagsterType, PythonObjectDagsterType
+from dagster.core.types.resolve_dagster_type import resolve_dagster_type
 
 
 class BarObj(object):
