@@ -130,6 +130,7 @@ class PipelineDefinition(IContainSolids, object):
         dependencies=None,
         mode_defs=None,
         preset_defs=None,
+        parent_pipeline_def=None,
     ):
         self._name = check.opt_str_param(name, 'name', '<<unnamed>>')
         self._description = check.opt_str_param(description, 'description')
@@ -193,9 +194,9 @@ class PipelineDefinition(IContainSolids, object):
         _validate_inputs(self._dependency_structure, self._solid_dict)
 
         self._all_solid_defs = _build_all_solid_defs(self._current_level_solid_defs)
-
-        self._selector = ExecutionSelector(self.name, list(solid_dict.keys()))
-
+        self._parent_pipeline_def = check.opt_inst_param(
+            parent_pipeline_def, 'parent_pipeline_def', PipelineDefinition
+        )
         self._cached_enviroment_schemas = {}
 
     def get_environment_schema(self, mode=None):
@@ -350,7 +351,10 @@ class PipelineDefinition(IContainSolids, object):
 
     @property
     def selector(self):
-        return self._selector
+        if self._parent_pipeline_def is None:
+            return ExecutionSelector(self.name)
+
+        return ExecutionSelector(self.name, list(self._solid_dict.keys()))
 
     def has_runtime_type(self, name):
         check.str_param(name, 'name')
@@ -461,6 +465,7 @@ def _build_sub_pipeline(pipeline_def, solid_names):
         solid_defs=list({solid.definition for solid in solids}),
         mode_defs=pipeline_def.mode_definitions,
         dependencies=deps,
+        parent_pipeline_def=pipeline_def,
     )
     handle, _ = ExecutionTargetHandle.get_handle(pipeline_def)
     if handle:
