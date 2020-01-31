@@ -14,10 +14,13 @@ def create_compute_step(pipeline_name, environment_config, solid, step_inputs, h
     check.opt_inst_param(handle, 'handle', SolidHandle)
 
     # the environment config has the solid output name configured
-    solid_config = environment_config.solids.get(handle.to_string())
     config_output_names = set()
-    for output_spec in solid_config.outputs:
-        config_output_names = config_output_names.union(output_spec.keys())
+    current_handle = handle
+    while current_handle:
+        solid_config = environment_config.solids.get(current_handle.to_string())
+        current_handle = current_handle.parent
+        for output_spec in solid_config.outputs:
+            config_output_names = config_output_names.union(output_spec.keys())
 
     return ExecutionStep(
         pipeline_name=pipeline_name,

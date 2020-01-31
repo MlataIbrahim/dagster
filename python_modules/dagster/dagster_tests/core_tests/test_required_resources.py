@@ -491,7 +491,49 @@ def test_custom_type_with_resource_dependent_materialization_selective_init():
     assert set(resources_initted.keys()) == set()
 
 
-@pytest.mark.skip(reason="not yet handling composites")
+def test_custom_type_with_resource_dependent_storage_plugin_selective_init():
+    def define_selective_plugin_pipeline(resources_initted):
+        class CustomStoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
+            @classmethod
+            def compatible_with_storage_def(cls, system_storage_def):
+                return False
+
+            @classmethod
+            def set_object(cls, intermediate_store, obj, context, runtime_type, paths):
+                assert context.resources.a == 'A'
+                return intermediate_store.set_object(obj, context, runtime_type, paths)
+
+            @classmethod
+            def get_object(cls, intermediate_store, context, runtime_type, paths):
+                assert context.resources.a == 'A'
+                return intermediate_store.get_object(context, runtime_type, paths)
+
+            @classmethod
+            def required_resource_keys(cls):
+                return {'a'}
+
+        @resource
+        def resource_a(_):
+            resources_initted['a'] = True
+            yield 'A'
+
+        CustomDagsterType = create_any_type(name='CustomType', auto_plugins=[CustomStoragePlugin])
+
+        @solid(output_defs=[OutputDefinition(CustomDagsterType)])
+        def output_solid(_context):
+            return 'hello'
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
+        def selective_pipeline():
+            output_solid()
+
+        return selective_pipeline
+
+    resources_initted = {}
+    assert execute_pipeline(define_selective_plugin_pipeline(resources_initted)).success
+    assert set(resources_initted.keys()) == set()
+
+
 def test_custom_type_with_resource_dependent_composite_materialization():
     def define_materialization_pipeline(should_require_resources):
         @resource
@@ -538,44 +580,59 @@ def test_custom_type_with_resource_dependent_composite_materialization():
     ).success
 
 
-def test_custom_type_with_resource_dependent_storage_plugin_selective_init():
-    def define_selective_plugin_pipeline(resources_initted):
-        class CustomStoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
-            @classmethod
-            def compatible_with_storage_def(cls, system_storage_def):
-                return False
-
-            @classmethod
-            def set_object(cls, intermediate_store, obj, context, runtime_type, paths):
-                assert context.resources.a == 'A'
-                return intermediate_store.set_object(obj, context, runtime_type, paths)
-
-            @classmethod
-            def get_object(cls, intermediate_store, context, runtime_type, paths):
-                assert context.resources.a == 'A'
-                return intermediate_store.get_object(context, runtime_type, paths)
-
-            @classmethod
-            def required_resource_keys(cls):
-                return {'a'}
-
+def test_custom_type_with_resource_dependent_composite_materialization_selective_init():
+    def define_materialization_pipeline(resources_initted):
         @resource
         def resource_a(_):
             resources_initted['a'] = True
             yield 'A'
 
-        CustomDagsterType = create_any_type(name='CustomType', auto_plugins=[CustomStoragePlugin])
+        @output_materialization_config(String, required_resource_keys={'a'})
+        def materialize(context, *_args, **_kwargs):
+            assert context.resources.a == 'A'
+            return Materialization('hello')
+
+        CustomDagsterType = create_any_type(
+            name='CustomType', output_materialization_config=materialize
+        )
 
         @solid(output_defs=[OutputDefinition(CustomDagsterType)])
         def output_solid(_context):
             return 'hello'
 
+        wrap_solid = CompositeSolidDefinition(
+            name="wrap_solid",
+            solid_defs=[output_solid],
+            output_mappings=[OutputDefinition(CustomDagsterType).mapping_from('output_solid')],
+        )
+
         @pipeline(mode_defs=[ModeDefinition(resource_defs={'a': resource_a})])
-        def selective_pipeline():
-            output_solid()
+        def output_pipeline():
+            wrap_solid()
 
-        return selective_pipeline
+        return output_pipeline
 
+    # test that configured output materialization of the wrapping composite initializes resource
     resources_initted = {}
-    assert execute_pipeline(define_selective_plugin_pipeline(resources_initted)).success
+    assert execute_pipeline(
+        define_materialization_pipeline(resources_initted),
+        {'solids': {'wrap_solid': {'outputs': [{'result': 'hello'}]}}},
+    ).success
+    assert set(resources_initted.keys()) == set('a')
+
+    # test that configured output materialization of the inner solid initializes resource
+    resources_initted = {}
+    assert execute_pipeline(
+        define_materialization_pipeline(resources_initted),
+        {
+            'solids': {
+                'wrap_solid': {'solids': {'output_solid': {'outputs': [{'result': 'hello'}]}}}
+            }
+        },
+    ).success
+    assert set(resources_initted.keys()) == set('a')
+
+    # test that no output config will not initialize anything
+    resources_initted = {}
+    assert execute_pipeline(define_materialization_pipeline(resources_initted),).success
     assert set(resources_initted.keys()) == set()
