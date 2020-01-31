@@ -110,20 +110,6 @@ class DagsterType(object):
     def is_nothing(self):
         return False
 
-    @property
-    def required_resource_keys(self):
-        resource_keys = set()
-        if self.input_hydration_config:
-            resource_keys.update(self.input_hydration_config.required_resource_keys())
-
-        if self.output_materialization_config:
-            resource_keys.update(self.output_materialization_config.required_resource_keys())
-
-        for plugin in self.auto_plugins:
-            resource_keys.update(plugin.required_resource_keys())
-
-        return frozenset(resource_keys)
-
 
 class BuiltinScalarDagsterType(DagsterType):
     def __init__(self, name, type_check_fn, *args, **kwargs):
