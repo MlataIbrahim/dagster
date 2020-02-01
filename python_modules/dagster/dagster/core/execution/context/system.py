@@ -203,7 +203,10 @@ class SystemStepExecutionContext(SystemPipelineExecutionContext):
         self._resources = self._pipeline_context_data.scoped_resources_builder.build(
             self.solid.resource_mapper_fn,
             get_required_resource_keys_for_step(
-                step, pipeline_context_data.pipeline_def, pipeline_context_data.system_storage_def,
+                step,
+                pipeline_context_data.pipeline_def,
+                pipeline_context_data.system_storage_def,
+                pipeline_context_data.mode_def,
             ),
         )
         self._log_manager = log_manager

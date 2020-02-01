@@ -9,6 +9,7 @@ from .container import IContainSolids, create_execution_structure, validate_depe
 from .dependency import (
     DependencyDefinition,
     MultiDependencyDefinition,
+    Solid,
     SolidHandle,
     SolidInvocation,
 )
@@ -187,7 +188,7 @@ class PipelineDefinition(IContainSolids, object):
             self._preset_dict[preset.name] = preset
 
         # Validate solid resource dependencies
-        _validate_resource_dependencies(self._mode_definitions, self._current_level_solid_defs)
+        _validate_resource_dependencies(self._mode_definitions, self._solid_dict)
 
         # Validate unsatisfied inputs can be materialized from config
         _validate_inputs(self._dependency_structure, self._solid_dict)
@@ -469,25 +470,32 @@ def _build_sub_pipeline(pipeline_def, solid_names):
     return sub_pipeline_def
 
 
-def _validate_resource_dependencies(mode_definitions, solid_defs):
+def _validate_resource_dependencies(mode_definitions, solid_dict):
     '''This validation ensures that each pipeline context provides the resources that are required
     by each solid.
     '''
     check.list_param(mode_definitions, 'mode_definintions', of_type=ModeDefinition)
-    check.list_param(solid_defs, 'solid_defs', of_type=ISolidDefinition)
+    check.dict_param(solid_dict, 'solid_dict', value_type=Solid)
 
     for mode_def in mode_definitions:
-        mode_resources = set(mode_def.resource_defs.keys())
-        for solid_def in solid_defs:
-            for required_resource in solid_def.required_resource_keys:
-                if required_resource not in mode_resources:
+        mode_resources = {key: key for key in mode_def.resource_defs.keys()}
+        for solid in solid_dict.values():
+            mapped_resources = solid.resource_mapper_fn(
+                mode_resources, solid.definition.required_resource_keys
+            )
+            for required_resource in solid.definition.required_resource_keys:
+                if required_resource not in mapped_resources:
                     raise DagsterInvalidDefinitionError(
                         (
-                            'Resource "{resource}" is required by solid def {solid_def_name}, but is not '
-                            'provided by mode "{mode_name}".'
+                            'Resource at key "{resource}" is required by solid definition '
+                            '"{solid_def_name}" on the instance "{solid_name}", but is not '
+                            'provided by mode "{mode_name}". Provide the resource on this '
+                            'mode or use a resource_mapper_fn if it is available at a '
+                            'different key.'
                         ).format(
                             resource=required_resource,
-                            solid_def_name=solid_def.name,
+                            solid_name=solid.name,
+                            solid_def_name=solid.definition.name,
                             mode_name=mode_def.name,
                         )
                     )

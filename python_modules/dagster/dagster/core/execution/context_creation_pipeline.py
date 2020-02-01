@@ -97,7 +97,7 @@ ContextCreationData = namedtuple(
 )
 
 
-def get_required_resource_keys_to_init(execution_plan, system_storage_def):
+def get_required_resource_keys_to_init(execution_plan, system_storage_def, mode_def):
     resource_keys = set()
 
     resource_keys = resource_keys.union(system_storage_def.required_resource_keys)
@@ -107,22 +107,26 @@ def get_required_resource_keys_to_init(execution_plan, system_storage_def):
             continue
         resource_keys = resource_keys.union(
             get_required_resource_keys_for_step(
-                step, execution_plan.pipeline_def, system_storage_def
+                step, execution_plan.pipeline_def, system_storage_def, mode_def
             )
         )
 
     return frozenset(resource_keys)
 
 
-def get_required_resource_keys_for_step(execution_step, pipeline_def, system_storage_def):
+def get_required_resource_keys_for_step(execution_step, pipeline_def, system_storage_def, mode_def):
     resource_keys = set()
 
     # add all the system storage resource keys
     resource_keys = resource_keys.union(system_storage_def.required_resource_keys)
-    solid_def = pipeline_def.get_solid(execution_step.solid_handle).definition
+    solid = pipeline_def.get_solid(execution_step.solid_handle)
 
     # add all the solid compute resource keys
-    resource_keys = resource_keys.union(solid_def.required_resource_keys)
+    mode_resources = {key: key for key in mode_def.resource_defs.keys()}
+    mapped_resources = solid.resource_mapper_fn(
+        mode_resources, solid.definition.required_resource_keys
+    )
+    resource_keys = resource_keys.union(set(mapped_resources.values()))
 
     # add input hydration config resource keys
     for step_input in execution_step.step_inputs:
@@ -145,7 +149,7 @@ def get_required_resource_keys_for_step(execution_step, pipeline_def, system_sto
             )
 
     # add all the storage-compatible plugin resource keys
-    for runtime_type in solid_def.all_runtime_types():
+    for runtime_type in solid.definition.all_runtime_types():
         for auto_plugin in runtime_type.auto_plugins:
             if auto_plugin.compatible_with_storage_def(system_storage_def):
                 resource_keys = resource_keys.union(auto_plugin.required_resource_keys())
@@ -174,7 +178,7 @@ def create_context_creation_data(
         executor_def=executor_def,
         instance=instance,
         resource_keys_to_init=get_required_resource_keys_to_init(
-            execution_plan, system_storage_def
+            execution_plan, system_storage_def, mode_def
         ),
     )
 

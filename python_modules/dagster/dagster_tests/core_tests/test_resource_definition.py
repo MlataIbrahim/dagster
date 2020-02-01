@@ -1,7 +1,5 @@
 import uuid
 
-import pytest
-
 from dagster import (
     DagsterResourceFunctionError,
     Field,
@@ -467,8 +465,6 @@ def test_resource_init_failure():
     assert events[0].event_type_value == 'PIPELINE_INIT_FAILURE'
 
 
-# https://github.com/dagster-io/dagster/issues/1949
-@pytest.mark.xfail
 def test_with_resource_mapper_fn_with_required_keys():
     resources_initted = {}
 
@@ -511,8 +507,6 @@ def test_with_resource_mapper_fn_with_required_keys():
     assert execute_pipeline(pipeline_with_resource_mapper).success
 
 
-# https://github.com/dagster-io/dagster/issues/1950
-@pytest.mark.xfail
 def test_with_resource_mapper_fn_without_required_keys():
     resources_initted = {}
 
