@@ -599,6 +599,8 @@ def gatsby_docs_build_tests():
                 "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
                 "pip install -e python_modules/dagster -qqq",
                 "pip install -e python_modules/dagstermill -qqq",
+                "pip install -e python_modules/dagster-celery -qqq",
+                "pip install -e python_modules/dagster-dask -qqq",
                 "cd docs",
                 "make json",
                 "cd gatsby",
