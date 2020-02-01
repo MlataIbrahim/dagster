@@ -6,7 +6,7 @@ import pytest
 from click.testing import CliRunner
 from dagit.app import create_app
 
-from dagster import DagsterTypeCheckError
+from dagster import Failure
 from dagster.cli.load_handle import handle_for_repo_cli_args
 from dagster.cli.pipeline import pipeline_execute_command
 from dagster.core.instance import DagsterInstance
@@ -73,28 +73,12 @@ cli_args = [
     ('complex_pipeline.py', 'complex_pipeline', None, None, None, 0, None),
     ('inputs.py', 'inputs_pipeline', 'inputs_env.yaml', None, None, 0, None),
     ('config_bad_1.py', 'config_pipeline', 'inputs_env.yaml', None, None, 0, None),
-    (
-        'config_bad_2.py',
-        'config_pipeline',
-        'config_bad_2.yaml',
-        None,
-        None,
-        1,
-        DagsterTypeCheckError,
-    ),
+    ('config_bad_2.py', 'config_pipeline', 'config_bad_2.yaml', None, None, 1, Failure,),
     ('config.py', 'config_pipeline', 'inputs_env.yaml', None, None, 0, None),
     ('config.py', 'config_pipeline', 'config_env_bad.yaml', None, None, 0, None),
     ('inputs_typed.py', 'inputs_pipeline', 'inputs_env.yaml', None, None, 0, None),
     ('custom_types.py', 'custom_type_pipeline', 'inputs_env.yaml', None, None, 0, None),
-    (
-        'custom_types_2.py',
-        'custom_type_pipeline',
-        'custom_types_2.yaml',
-        None,
-        None,
-        1,
-        DagsterTypeCheckError,
-    ),
+    ('custom_types_2.py', 'custom_type_pipeline', 'custom_types_2.yaml', None, None, 1, Failure,),
     ('custom_types_3.py', 'custom_type_pipeline', 'custom_type_input.yaml', None, None, 0, None),
     ('custom_types_4.py', 'custom_type_pipeline', 'custom_type_input.yaml', None, None, 0, None),
     ('custom_types_5.py', 'custom_type_pipeline', 'custom_type_input.yaml', None, None, 1, None),
